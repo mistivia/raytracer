@@ -10,20 +10,20 @@
 
 namespace raytracer {
 
-typedef enum {
-    kAmbientLight,
-    kPointLight,
-    kDirectionalLight,
-} LightType;
+enum class light_type {
+    ambient,
+    point,
+    directional,
+};
 
 typedef struct {
-    LightType type;
+    light_type type;
     float intensity;
-    Vec3f vec;
+    vec3<float> vec;
 } Light;
 
-Vec3f screen_proj(int width, int height, Vec2i sp) {
-    Vec3f ret;
+vec3<float> screen_proj(int width, int height, vec2<int> sp) {
+    vec3<float> ret;
     float maxlen = width > height ? width : height; 
     ret.z = 1.0;
     ret.x = (sp.x - width / 2.0) / maxlen;
@@ -32,9 +32,9 @@ Vec3f screen_proj(int width, int height, Vec2i sp) {
 }
 
 typedef struct {
-    Vec3f center;
+    vec3<float> center;
     float r;
-    Color color;
+    raytracer::color color;
     float specular;
     float reflective;
 } Ball;
@@ -68,34 +68,34 @@ Ball balls[] = {
 
 Light lights[] = {
     {
-        .type = kAmbientLight,
+        .type = light_type::ambient,
         .intensity = 0.2,
     },
     {
-        .type = kPointLight,
+        .type = light_type::point,
         .intensity = 0.6,
         .vec = {2.0, 1.0, 0.0},
     },
     {
-        .type = kDirectionalLight,
+        .type = light_type::directional,
         .intensity = 0.2,
         .vec = {1.0, 4.0, 4.0}
     },
 };
 
 
-Color gBackgroupColor = {0,0,0};
+color gBackgroupcolor = {0,0,0};
 
 void init_color() {
     balls[0].color = icolor(0x95e1d3);
     balls[1].color = icolor(0xfce38a);
     balls[2].color = icolor(0xf38181);
     balls[3].color = icolor(0xeaffd0);
-    // gBackgroupColor = icolor(0xeaeaea);
+    // gBackgroupcolor = icolor(0xeaeaea);
 }
 
-float ball_intersect(Vec3f start, Vec3f ray, Ball *ball) {
-    Vec3f sc = vec3f_sub(start, ball->center);
+float ball_intersect(vec3<float> start, vec3<float> ray, Ball *ball) {
+    vec3<float> sc = start - ball->center;
     float a = vec3f_dot(ray, ray);
     float b = 2 * vec3f_dot(sc, ray);
     float c = vec3f_dot(sc, sc) - ball->r * ball->r;
@@ -108,11 +108,11 @@ float ball_intersect(Vec3f start, Vec3f ray, Ball *ball) {
     return t1 < t2 ? t1 : t2;
 }
 
-bool is_in_shadow(Vec3f pos, Light light) {
-    Vec3f ray;
-    if (light.type == kPointLight) {
-        ray = vec3f_sub(light.vec, pos);
-    } else if (light.type == kDirectionalLight) {
+bool is_in_shadow(vec3<float> pos, Light light) {
+    vec3<float> ray;
+    if (light.type == light_type::point) {
+        ray = light.vec - pos;
+    } else if (light.type == light_type::directional) {
         ray = light.vec;
     } else {
         return false;
@@ -122,22 +122,22 @@ bool is_in_shadow(Vec3f pos, Light light) {
         float t = ball_intersect(pos, ray, &balls[i]);
         if (t > EPSILON && t < tmin) tmin = t;
     }
-    if (light.type == kPointLight) {
+    if (light.type == light_type::point) {
         return tmin < 1;
     }
-    if (light.type == kDirectionalLight) {
+    if (light.type == light_type::directional) {
         return tmin != FLT_MAX;
     }
     return false;
 }
 
-Vec3f reflection(Vec3f rayin, Vec3f norm) {
+vec3<float> reflection(vec3<float> rayin, vec3<float> norm) {
     rayin = vec3f_normalize(vec3f_neg(rayin));
-    return vec3f_sub(vec3f_mul(2 * vec3f_dot(norm, rayin), norm), rayin);
+    return vec3f_mul(2 * vec3f_dot(norm, rayin), norm) - rayin;
 }
 
-float specular_coeff(Vec3f l, Vec3f n, Vec3f v, float s) {
-    Vec3f r = reflection(vec3f_neg(l), n);
+float specular_coeff(vec3<float> l, vec3<float> n, vec3<float> v, float s) {
+    vec3<float> r = reflection(vec3f_neg(l), n);
     v = vec3f_normalize(v);
     float prod = vec3f_dot(r, vec3f_neg(v));
     if (prod < 0) return 0;
@@ -145,16 +145,16 @@ float specular_coeff(Vec3f l, Vec3f n, Vec3f v, float s) {
 }
 
 
-Color ball_surface_color(Ball *ball, Vec3f point, Vec3f view) {
-    Vec3f norm = vec3f_normalize(vec3f_sub(point, ball->center));
+color ball_surface_color(Ball *ball, vec3<float> point, vec3<float> view) {
+    vec3<float> norm = vec3f_normalize(point - ball->center);
     float amp = 0;
     for (int i = 0; (uint64_t)i < sizeof(lights) / sizeof(Light); i++) {
-        if (lights[i].type == kAmbientLight) {
+        if (lights[i].type == light_type::ambient) {
             amp += lights[i].intensity;
-        } else if (lights[i].type == kPointLight) {
+        } else if (lights[i].type == light_type::point) {
             if (is_in_shadow(point, lights[i])) continue;
-            Vec3f pos2light = vec3f_sub(lights[i].vec, point); 
-            Vec3f l = vec3f_normalize(pos2light);
+            vec3<float> pos2light = lights[i].vec - point; 
+            vec3<float> l = vec3f_normalize(pos2light);
             float distance = sqrtf(vec3f_dot(pos2light, pos2light));
             float prod = vec3f_dot(l, norm);
             if (prod > 0) amp += prod * lights[i].intensity;
@@ -165,9 +165,9 @@ Color ball_surface_color(Ball *ball, Vec3f point, Vec3f view) {
             float distance_coeff = 1/distance * distance;
             if (distance_coeff > 2500) distance_coeff = 2500; 
             amp *= distance_coeff;
-        } else if (lights[i].type == kDirectionalLight) {
+        } else if (lights[i].type == light_type::directional) {
             if (is_in_shadow(point, lights[i])) continue;
-            Vec3f l = vec3f_normalize(lights[i].vec);
+            vec3<float> l = vec3f_normalize(lights[i].vec);
             float prod = vec3f_dot(l, norm);
             if (prod > 0) amp += prod * lights[i].intensity;
             if (ball->specular > 0) {
@@ -176,7 +176,7 @@ Color ball_surface_color(Ball *ball, Vec3f point, Vec3f view) {
             }
         }
     }
-    return (Color){
+    return (color){
         ball->color.r * amp,
         ball->color.g * amp,
         ball->color.b * amp
@@ -185,11 +185,11 @@ Color ball_surface_color(Ball *ball, Vec3f point, Vec3f view) {
 
 #define MAX_TRACE_DEPTH 3
 
-Vec3f ball_norm(Vec3f center, Vec3f pos) {
-    return vec3f_normalize(vec3f_sub(pos, center));
+vec3<float> ball_norm(vec3<float> center, vec3<float> pos) {
+    return vec3f_normalize(pos - center);
 }
 
-Color calc_color(Vec3f start, Vec3f v, float tmin, float tmax, int trace_depth) {
+color calc_color(vec3<float> start, vec3<float> v, float tmin, float tmax, int trace_depth) {
     int nearest_idx = -1;
     float t_nearest = FLT_MAX;
     for (int i = 0; (uint64_t)i < sizeof(balls) / sizeof(Ball); i++) {
@@ -201,13 +201,13 @@ Color calc_color(Vec3f start, Vec3f v, float tmin, float tmax, int trace_depth) 
     }
     if (nearest_idx >= 0) {
         Ball hit = balls[nearest_idx];
-        Vec3f intersection = vec3f_add(start, vec3f_mul(t_nearest, v));
-        Color local_color = ball_surface_color(&hit, intersection, v);
+        vec3<float> intersection = start + vec3f_mul(t_nearest, v);
+        color local_color = ball_surface_color(&hit, intersection, v);
         if (hit.reflective > 0 && trace_depth < MAX_TRACE_DEPTH) {
-            Vec3f refray = reflection(v, ball_norm(hit.center, intersection));
-            Color rcolor = calc_color(intersection, refray, EPSILON, FLT_MAX, trace_depth + 1);
+            vec3<float> refray = reflection(v, ball_norm(hit.center, intersection));
+            color rcolor = calc_color(intersection, refray, EPSILON, FLT_MAX, trace_depth + 1);
             float r = hit.reflective;
-            return (Color) {
+            return (color) {
                 r * rcolor.r + (1-r) * local_color.r,
                 r * rcolor.g + (1-r) * local_color.g,
                 r * rcolor.b + (1-r) * local_color.b,
@@ -216,7 +216,7 @@ Color calc_color(Vec3f start, Vec3f v, float tmin, float tmax, int trace_depth) 
             return local_color;
         }
     } else {
-        return gBackgroupColor;
+        return gBackgroupcolor;
     }
 }
 
@@ -229,13 +229,13 @@ int main() {
     int img_w = 800*2;
     int img_h = 800*2;
     Picture pic = new_picture(img_w, img_h);
-    Vec3f camera_pos = {.x = 0, .y = 0, .z = -10};
+    vec3<float> camera_pos = {.x = 0, .y = 0, .z = -10};
     float tmin = 0.1;
     float tmax = FLT_MAX;
     for (int x = 0; x < img_w; x++) {
         for (int y = 0; y < img_h; y++) {
-            Vec2i screen_pos = {x, y};
-            Vec3f v = screen_proj(img_w, img_h, screen_pos);
+            vec2<int> screen_pos = {x, y};
+            vec3<float> v = screen_proj(img_w, img_h, screen_pos);
             set_pixel(pic, screen_pos, calc_color(camera_pos, v, tmin, tmax, 0));
         }
     }

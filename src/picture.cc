@@ -19,12 +19,12 @@ void delete_picture(Picture pic) {
     free(pic.buffer);
 }
 
-Color get_pixel(Picture pic, Vec2i pos) {
+color get_pixel(Picture pic, vec2<int> pos) {
     int idx = pos.y * pic.width * 3 + pos.x * 3;
-    return (Color) { pic.buffer[idx+2], pic.buffer[idx+1], pic.buffer[idx] };
+    return (color) { pic.buffer[idx+2], pic.buffer[idx+1], pic.buffer[idx] };
 }
 
-void set_pixel(Picture pic, Vec2i pos, Color c) {
+void set_pixel(Picture pic, vec2<int> pos, color c) {
     int idx = pos.y * pic.width * 3 + pos.x * 3;
     pic.buffer[idx] = c.b;
     pic.buffer[idx+1] = c.g;
@@ -48,12 +48,12 @@ Picture picture_downscale_2x(Picture pic) {
     Picture newpic = new_picture(pic.width / 2, pic.height / 2);
     for (int x = 0; x < newpic.width; x++) {
         for (int y = 0; y < newpic.height; y++) {
-            Color pixels[4];
-            pixels[0] = get_pixel(pic, (Vec2i){2*x, 2*y});
-            pixels[1] = get_pixel(pic, (Vec2i){2*x+1, 2*y});
-            pixels[2] = get_pixel(pic, (Vec2i){2*x, 2*y+1});
-            pixels[3] = get_pixel(pic, (Vec2i){2*x+1, 2*y+1});
-            set_pixel(newpic, (Vec2i){x,y}, pixel_avg4(pixels));
+            color pixels[4];
+            pixels[0] = get_pixel(pic, (vec2<int>){2*x, 2*y});
+            pixels[1] = get_pixel(pic, (vec2<int>){2*x+1, 2*y});
+            pixels[2] = get_pixel(pic, (vec2<int>){2*x, 2*y+1});
+            pixels[3] = get_pixel(pic, (vec2<int>){2*x+1, 2*y+1});
+            set_pixel(newpic, (vec2<int>){x,y}, pixel_avg4(pixels));
         }
     }
     return newpic;

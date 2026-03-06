@@ -15,7 +15,7 @@ typedef struct {
 Picture new_picture(int width, int height);
 void delete_picture(Picture pic);
 
-void set_pixel(Picture pic, Vec2i pos, Color c);
+void set_pixel(Picture pic, vec2<int> pos, color c);
 void normalize_picture(Picture pic);
 Picture picture_downscale_2x(Picture pic);
 
