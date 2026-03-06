@@ -3,6 +3,8 @@
 #include <math.h>
 #include <stdio.h>
 
+namespace raytracer {
+
 Vec3f vec3f_sub(Vec3f lhs, Vec3f rhs) {
     return (Vec3f){
         .x = lhs.x - rhs.x,
@@ -40,7 +42,7 @@ Color icolor(int32_t rgb) {
     int r = (rgb >> 16) & 0xff;
     int g = (rgb >> 8) & 0xff;
     int b = rgb & 0xff;
-    return (Color){.r = r/255.0, .g = g/255.0, .b = b/255.0};
+    return (Color){.r = r/(float)255.0, .g = g/(float)255.0, .b = b/(float)255.0};
 }
 
 void vec3f_show(const char *name, Vec3f v) {
@@ -54,5 +56,7 @@ Color pixel_avg4(Color pixels[4]) {
         g += pixels[i].g; 
         b += pixels[i].b; 
     }
-    return (Color) {r/4.0, g/4.0, b/4.0};
+    return (Color) {r/(float)4.0, g/(float)4.0, b/(float)4.0};
 }
+
+} // namespace raytracer

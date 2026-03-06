@@ -5,11 +5,13 @@
 #include <stdio.h>
 #include <string.h>
 
+namespace raytracer {
+
 Picture new_picture(int width, int height) {
     Picture ret;
     ret.width = width;
     ret.height = height;
-    ret.buffer = malloc(sizeof(float) * width * height * 3);
+    ret.buffer = (float*)malloc(sizeof(float) * width * height * 3);
     return ret;
 }
 
@@ -31,13 +33,13 @@ void set_pixel(Picture pic, Vec2i pos, Color c) {
 
 void normalize_picture(Picture pic) {
     float maxval = 0;
-    for (size_t i = 0; i < pic.width * pic.height * 3; i++) {
+    for (size_t i = 0; (int)i < pic.width * pic.height * 3; i++) {
         float val = pic.buffer[i];
         if (val < 0) val = 0;
         if (val > maxval) maxval = val;
     }
     if (maxval < 1.0) return;
-    for (size_t i = 0; i < pic.width * pic.height * 3; i++) {
+    for (size_t i = 0; (int)i < pic.width * pic.height * 3; i++) {
         pic.buffer[i] = pic.buffer[i] / maxval;
     }
 }
@@ -85,15 +87,14 @@ bool writeBMP(const char* filename, Picture pic) {
     bool ret = false;
     FILE *fp = NULL;
     uint8_t *databuf = NULL;
-
-    fp = fopen(filename, "wb");
-    if (!fp) goto end;
-
     int row_data_len = 3 * pic.width;
     int padding = (4 - row_data_len % 4) % 4;
     int row_len = row_data_len + padding;
     int img_len = row_len * pic.height;
     int file_len = 53 + img_len;
+
+    fp = fopen(filename, "wb");
+    if (!fp) goto end;
 
     ret = fwrite_word16le(fp, 0x4d42);
     if (!ret) goto end;
@@ -126,7 +127,7 @@ bool writeBMP(const char* filename, Picture pic) {
     if (!ret) goto end;
     ret = fwrite_word32le(fp, 0);
     if (!ret) goto end;
-    databuf = malloc(img_len);
+    databuf = (uint8_t*)malloc(img_len);
     memset(databuf, 0, img_len);
     for (int i = 0; i < pic.height; i++) {
         for (int j = 0; j < pic.width * 3; j++) {
@@ -139,7 +140,7 @@ bool writeBMP(const char* filename, Picture pic) {
             } else databuf[toidx] = 255 * value;
         }
     }
-    if (fwrite(databuf, 1, img_len, fp) != img_len) {
+    if ((int)fwrite(databuf, 1, img_len, fp) != img_len) {
         ret = false;
         goto end;
     }
@@ -150,3 +151,5 @@ end:
     if (fp != NULL) fclose(fp);
     return ret;
 }
+
+} // namespace raytracer

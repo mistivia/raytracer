@@ -1,7 +1,8 @@
-#ifndef VECMATH_H_
-#define VECMATH_H_
+#pragma once
 
 #include <stdint.h>
+
+namespace raytracer {
 
 typedef struct {
     int x;
@@ -32,4 +33,4 @@ void vec3f_show(const char *name, Vec3f v);
 Color icolor(int32_t rgb);
 Color pixel_avg4(Color pixels[4]);
 
-#endif
+} // namespace raytracer

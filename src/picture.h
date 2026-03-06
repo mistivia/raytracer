@@ -1,10 +1,10 @@
-#ifndef PICTURE_H_
-#define PICTURE_H_
+#pragma once
 
 #include <stdbool.h>
 
 #include "vecmath.h"
 
+namespace raytracer {
 
 typedef struct {
     int width;
@@ -21,5 +21,5 @@ Picture picture_downscale_2x(Picture pic);
 
 bool writeBMP(const char* filename, Picture pic);
 
-#endif
+} // namespace raytracer
 

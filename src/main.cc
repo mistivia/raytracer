@@ -8,6 +8,8 @@
 
 #define EPSILON 0.001
 
+namespace raytracer {
+
 typedef enum {
     kAmbientLight,
     kPointLight,
@@ -116,7 +118,7 @@ bool is_in_shadow(Vec3f pos, Light light) {
         return false;
     }
     float tmin = FLT_MAX;
-    for (int i = 0; i < sizeof(balls) / sizeof(Ball); i++) {
+    for (int i = 0; (uint64_t)i < sizeof(balls) / sizeof(Ball); i++) {
         float t = ball_intersect(pos, ray, &balls[i]);
         if (t > EPSILON && t < tmin) tmin = t;
     }
@@ -146,18 +148,23 @@ float specular_coeff(Vec3f l, Vec3f n, Vec3f v, float s) {
 Color ball_surface_color(Ball *ball, Vec3f point, Vec3f view) {
     Vec3f norm = vec3f_normalize(vec3f_sub(point, ball->center));
     float amp = 0;
-    for (int i = 0; i < sizeof(lights) / sizeof(Light); i++) {
+    for (int i = 0; (uint64_t)i < sizeof(lights) / sizeof(Light); i++) {
         if (lights[i].type == kAmbientLight) {
             amp += lights[i].intensity;
         } else if (lights[i].type == kPointLight) {
             if (is_in_shadow(point, lights[i])) continue;
-            Vec3f l = vec3f_normalize(vec3f_sub(lights[i].vec, point));
+            Vec3f pos2light = vec3f_sub(lights[i].vec, point); 
+            Vec3f l = vec3f_normalize(pos2light);
+            float distance = sqrtf(vec3f_dot(pos2light, pos2light));
             float prod = vec3f_dot(l, norm);
             if (prod > 0) amp += prod * lights[i].intensity;
             if (ball->specular > 0) {
                 amp += specular_coeff(l, norm, view, ball->specular)
                         * lights[i].intensity;
             }
+            float distance_coeff = 1/distance * distance;
+            if (distance_coeff > 2500) distance_coeff = 2500; 
+            amp *= distance_coeff;
         } else if (lights[i].type == kDirectionalLight) {
             if (is_in_shadow(point, lights[i])) continue;
             Vec3f l = vec3f_normalize(lights[i].vec);
@@ -185,7 +192,7 @@ Vec3f ball_norm(Vec3f center, Vec3f pos) {
 Color calc_color(Vec3f start, Vec3f v, float tmin, float tmax, int trace_depth) {
     int nearest_idx = -1;
     float t_nearest = FLT_MAX;
-    for (int i = 0; i < sizeof(balls) / sizeof(Ball); i++) {
+    for (int i = 0; (uint64_t)i < sizeof(balls) / sizeof(Ball); i++) {
         float t = ball_intersect(start, v, &balls[i]);
         if (t < t_nearest && t < tmax && t > tmin) {
             t_nearest = t;
@@ -213,13 +220,16 @@ Color calc_color(Vec3f start, Vec3f v, float tmin, float tmax, int trace_depth) 
     }
 }
 
+} // namespace raytracer 
+
+using namespace raytracer;
 
 int main() {
     init_color();
     int img_w = 800*2;
     int img_h = 800*2;
     Picture pic = new_picture(img_w, img_h);
-    Vec3f camera_pos = {.x = 0, .y = 0, .z = 0};
+    Vec3f camera_pos = {.x = 0, .y = 0, .z = -10};
     float tmin = 0.1;
     float tmax = FLT_MAX;
     for (int x = 0; x < img_w; x++) {
